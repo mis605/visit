@@ -1114,13 +1114,15 @@
         let selectedTanggal = [];
 
         // ============================================================
-        // GOOGLE SIGN-IN
+        // GOOGLE SIGN-IN + SESSION (sessionStorage, TTL 5 menit)
         // ============================================================
+        const SESSION_TTL_MS = 5 * 60 * 1000; // 5 menit
+
         window.onload = function () {
             google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
-                callback: onGoogleSignIn,
-                auto_select: true
+                callback: onGoogleSignIn
+                // auto_select dan prompt sengaja dimatikan — mencegah FedCM AbortError
             });
 
             google.accounts.id.renderButton(
@@ -1128,13 +1130,32 @@
                 { theme: 'filled_blue', size: 'large', width: 280, text: 'signin_with', shape: 'pill' }
             );
 
-            google.accounts.id.prompt();
+            // Coba pulihkan sesi dari sessionStorage
+            const saved = sessionStorage.getItem('visitSession');
+            if (saved) {
+                try {
+                    const sess = JSON.parse(saved);
+                    if (Date.now() < sess.expiresAt) {
+                        currentIdToken = sess.idToken;
+                        currentUser = sess.user;
+                        document.getElementById('userAvatar').textContent = sess.user.nama ? sess.user.nama.charAt(0).toUpperCase() : '?';
+                        document.getElementById('userLabel').textContent = sess.user.nama || sess.user.email;
+                        document.getElementById('loginPage').style.display = 'none';
+                        document.getElementById('appPage').style.display = 'block';
+                        loadProjects();
+                        renderCalendar();
+                        return;
+                    } else {
+                        sessionStorage.removeItem('visitSession');
+                    }
+                } catch (_) { sessionStorage.removeItem('visitSession'); }
+            }
 
             renderCalendar();
         };
 
         function onGoogleSignIn(res) {
-            currentIdToken = res.credential;  // simpan JWT untuk request berikutnya
+            currentIdToken = res.credential;
             const payload = parseJwt(res.credential);
             const email = payload.email;
 
@@ -1150,6 +1171,12 @@
                         return;
                     }
                     currentUser = result;
+                    // Simpan sesi ke sessionStorage (berlaku 5 menit)
+                    sessionStorage.setItem('visitSession', JSON.stringify({
+                        idToken: currentIdToken,
+                        user: result,
+                        expiresAt: Date.now() + SESSION_TTL_MS
+                    }));
                     document.getElementById('userAvatar').textContent = result.nama ? result.nama.charAt(0).toUpperCase() : '?';
                     document.getElementById('userLabel').textContent = result.nama || result.email;
                     document.getElementById('appPage').style.display = 'block';
@@ -1394,15 +1421,18 @@
             document.querySelectorAll('.visit-chip').forEach(c => c.classList.remove('active'));
             document.getElementById('chip-' + idx).classList.add('active');
             const v = userVisits[idx];
+            // Reset dulu sebelum isi konten baru
+            resetCameraSection();
+            selectedVisit = v;
+            // Isi detail card
             document.getElementById('dcNoVisit').textContent = v.noVisit;
             document.getElementById('dcNamaProyek').textContent = v.namaProyek;
             document.getElementById('dcNamaKlien').textContent = v.namaKlien;
             document.getElementById('dcTglRencana').textContent = v.tglRencana;
             document.getElementById('dcStatus').textContent = v.status || 'Direncanakan';
+            // Tampilkan detail + kamera SETELAH reset
             document.getElementById('detailCard').classList.add('show');
-            selectedVisit = v;
             document.getElementById('cameraSection').style.display = 'block';
-            resetCameraSection();
             startCamera();
         }
 
@@ -1534,8 +1564,8 @@
             document.getElementById('btnSubmitRealisasi').disabled = true;
             document.getElementById('progressRealisasi').classList.remove('show');
             document.getElementById('resultRealisasi').classList.remove('show');
-            document.getElementById('detailCard').classList.remove('show');
-            document.getElementById('cameraSection').style.display = 'none';
+            // Catatan: detailCard dan cameraSection TIDAK direset di sini
+            // agar tidak menghapus konten yang baru saja diisi di selectVisit()
             capturedBase64 = null; capturedTimestamp = '';
         }
 
