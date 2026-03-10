@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visit Management</title>
+    <meta name="description" content="Aplikasi Rencana & Realisasi Kunjungan Klien">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- ============================================================
+         CONFIGURATION — Ganti kedua nilai ini
+    ============================================================ -->
+    <script>
+        const GAS_API_URL = 'GANTI_DENGAN_URL_DEPLOYMENT_GAS_ANDA'; // https://script.google.com/macros/s/XXX/exec
+        const GOOGLE_CLIENT_ID = 'GANTI_DENGAN_GOOGLE_OAUTH_CLIENT_ID'; // dari Google Cloud Console
+    </script>
+
+    <!-- Google Sign-In library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        /* ==============================
+           ROOT DESIGN TOKENS
+        ============================== */
+        :root {
+            --bg-base: #0b0f1a;
+            --bg-card: #111827;
+            --bg-card2: #1a2235;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-1: #f1f5f9;
+            --text-2: #94a3b8;
+            --text-3: #64748b;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: all .2s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-1);
+            min-height: 100vh;
+            overscroll-behavior: none;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        /* ==============================
+           LOGIN PAGE
+        ============================== */
+        #loginPage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px 32px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-logo {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .login-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #60a5fa, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--text-3);
+            margin-bottom: 32px;
+        }
+
+        #g_id_signin_btn {
+            display: flex;
+            justify-content: center;
+        }
+
+        .login-note {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 20px;
+        }
+
+        /* ==============================
+           APP SHELL
+        ============================== */
+        #appPage {
+            display: none;
+        }
+
+        .app-wrap {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 0 16px 80px;
+        }
+
+        /* HEADER */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(11, 15, 26, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            font-size: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 4px 12px 4px 4px;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #818cf8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .user-label {
+            font-size: 12px;
+            color: var(--text-2);
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* TABS */
+        .tab-bar {
+            display: flex;
+            gap: 6px;
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 4px;
+            margin: 16px 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-3);
+            background: transparent;
+            transition: var(--transition);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        /* CARD */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* FORM */
+        .form-group {
+            margin-top: 16px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-1);
+            font-size: 13px;
+            font-family: inherit;
+            padding: 10px 12px;
+            transition: var(--transition);
+            appearance: none;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* PROJECT INFO CARD */
+        .info-card {
+            display: none;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(99, 102, 241, 0.06));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-top: 12px;
+            animation: fadeIn .3s ease;
+        }
+
+        .info-card.show {
+            display: block;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .inf-key {
+            font-size: 10px;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .inf-val {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-1);
+        }
+
+        /* BUTTON */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            transition: var(--transition);
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--success-glow);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn-success:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        /* PROGRESS */
+        .progress-wrap {
+            display: none;
+            margin-top: 16px;
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+        }
+
+        .progress-wrap.show {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-2);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-track {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #818cf8);
+            border-radius: 3px;
+            transition: width .4s ease;
+            width: 0%;
+        }
+
+        .progress-step {
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        /* RESULT CARD */
+        .result-card {
+            display: none;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.08));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            margin-top: 16px;
+            animation: fadeIn .4s ease;
+        }
+
+        .result-card.show {
+            display: block;
+        }
+
+        .result-card .res-icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .result-card .res-no {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--success);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .result-card .res-text {
+            font-size: 12px;
+            color: var(--text-2);
+        }
+
+        /* ==============================
+           CALENDAR
+        ============================== */
+        .calendar-wrap {
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-top: 6px;
+        }
+
+        .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .cal-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-1);
+        }
+
+        .cal-nav-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+            transition: var(--transition);
+        }
+
+        .cal-nav-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .cal-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+
+        .cal-day-name {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            text-align: center;
+            padding: 4px 0;
+        }
+
+        .cal-date {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-2);
+        }
+
+        .cal-date:hover:not(.disabled) {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--text-1);
+        }
+
+        .cal-date.active {
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        .cal-date.disabled {
+            color: var(--text-3);
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .selected-dates-badge {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            text-align: center;
+        }
+
+        /* ==============================
+           REALISASI PAGE
+        ============================== */
+        .visit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .visit-chip {
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 11px;
+        }
+
+        .visit-chip .chip-no {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .visit-chip .chip-tgl {
+            color: var(--text-3);
+            font-size: 10px;
+        }
+
+        .visit-chip .chip-proj {
+            color: var(--text-2);
+            font-size: 10px;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .visit-chip:hover,
+        .visit-chip.active {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.08);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .visit-chip.active .chip-no {
+            color: #93c5fd;
+        }
+
+        /* DETAIL CARD */
+        .detail-card {
+            display: none;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(99, 102, 241, 0.06));
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 18px;
+            margin-bottom: 16px;
+            animation: fadeIn .3s ease;
+        }
+
+        .detail-card.show {
+            display: block;
+        }
+
+        .detail-card .dc-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .detail-item .di-label {
+            font-size: 10px;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .detail-item .di-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-1);
+            margin-top: 2px;
+        }
+
+        /* CAMERA */
+        .camera-wrap {
+            position: relative;
+            background: #000;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            aspect-ratio: 2/3;
+            max-height: 480px;
+            margin: 0 auto 16px;
+            border: 2px solid var(--border);
+            display: none;
+        }
+
+        .camera-wrap.show {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        #cameraVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 20px;
+            background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.5));
+        }
+
+        .camera-timestamp {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 11px;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, .9);
+            font-weight: 600;
+            letter-spacing: .5px;
+            background: rgba(0, 0, 0, .45);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .shutter-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #fff;
+            border: 4px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 4px 16px rgba(0, 0, 0, 0.5);
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .shutter-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .shutter-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* PHOTO PREVIEW */
+        .photo-preview-wrap {
+            display: none;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            aspect-ratio: 2/3;
+            max-height: 480px;
+            margin: 0 auto 16px;
+            border: 2px solid var(--success);
+            position: relative;
+            box-shadow: 0 0 16px var(--success-glow);
+        }
+
+        .photo-preview-wrap.show {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        #photoPreview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .retake-btn {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, .65);
+            border: 1px solid rgba(255, 255, 255, .2);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            backdrop-filter: blur(4px);
+        }
+
+        .retake-btn:hover {
+            background: rgba(255, 255, 255, .15);
+        }
+
+        /* FALLBACK */
+        #fallbackWrap {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-3);
+        }
+
+        .empty-state .es-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state .es-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-2);
+            margin-bottom: 6px;
+        }
+
+        .empty-state .es-text {
+            font-size: 13px;
+        }
+
+        /* SPINNER */
+        .spinner-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .spinner-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner-text {
+            font-size: 13px;
+            color: var(--text-2);
+        }
+
+        /* TOAST */
+        #toastContainer {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 260px;
+            max-width: 90vw;
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            animation: slideUp .3s ease;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast.success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .toast.error {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .toast.warning {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .toast.info {
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            color: var(--text-1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SPINNER OVERLAY -->
+    <div class="spinner-overlay" id="spinnerOverlay">
+        <div class="spinner"></div>
+        <div class="spinner-text" id="spinnerText">Memuat...</div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer"></div>
+
+    <!-- ============================================================
+     LOGIN PAGE
+============================================================ -->
+    <div id="loginPage">
+        <div class="login-card">
+            <div class="login-logo">🏢</div>
+            <div class="login-title">Visit Management</div>
+            <div class="login-subtitle">Rencana & Realisasi Kunjungan Klien</div>
+            <div id="g_id_signin_btn"></div>
+            <p class="login-note">Hanya akun yang terdaftar yang dapat login.</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+     APP PAGE
+============================================================ -->
+    <div id="appPage">
+        <header class="app-header">
+            <div class="header-brand">🏢 Visit Management</div>
+            <div class="user-pill">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <span class="user-label" id="userLabel">Memuat...</span>
+            </div>
+        </header>
+
+        <div class="app-wrap">
+            <!-- TABS -->
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tabRencana" onclick="switchTab('rencana')">📝 Rencana
+                    Kunjungan</button>
+                <button class="tab-btn" id="tabRealisasi" onclick="switchTab('realisasi')">📍 Realisasi</button>
+            </div>
+
+            <!-- ============================================================
+             PAGE: RENCANA KUNJUNGAN
+        ============================================================ -->
+            <div id="pageRencana">
+                <div class="card">
+                    <div class="card-title">📝 Ajukan Rencana Kunjungan</div>
+
+                    <div class="form-group">
+                        <label class="form-label">Pilih Proyek</label>
+                        <select class="form-control" id="selectProject" onchange="onProjectChange()">
+                            <option value="">— Pilih Proyek —</option>
+                        </select>
+                    </div>
+
+                    <div class="info-card" id="projectInfoCard">
+                        <div class="info-row"><span class="inf-key">Nama Proyek</span><span class="inf-val"
+                                id="infoNamaProyek">—</span></div>
+                        <div class="info-row"><span class="inf-key">Klien</span><span class="inf-val"
+                                id="infoNamaKlien">—</span></div>
+                        <div class="info-row"><span class="inf-key">Lokasi</span><span class="inf-val"
+                                id="infoLokasi">—</span></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Kunjungan</label>
+                        <div class="calendar-wrap" id="customCalendar">
+                            <div class="cal-header">
+                                <button class="cal-nav-btn" id="calPrevBtn" onclick="calPrevMonth()">◀</button>
+                                <div class="cal-title" id="calTitle">—</div>
+                                <button class="cal-nav-btn" id="calNextBtn" onclick="calNextMonth()">▶</button>
+                            </div>
+                            <div class="cal-grid">
+                                <div class="cal-day-name">Min</div>
+                                <div class="cal-day-name">Sen</div>
+                                <div class="cal-day-name">Sel</div>
+                                <div class="cal-day-name">Rab</div>
+                                <div class="cal-day-name">Kam</div>
+                                <div class="cal-day-name">Jum</div>
+                                <div class="cal-day-name">Sab</div>
+                            </div>
+                            <div class="cal-grid" id="calGrid"></div>
+                            <div class="selected-dates-badge" id="selectedDatesBadge" style="display:none;">
+                                Terpilih: <span id="selectedDatesCount">0</span> hari
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnSubmitRencana" onclick="submitRencana()" disabled>
+                        📤 Ajukan Rencana Kunjungan
+                    </button>
+
+                    <div class="progress-wrap" id="progressRencana">
+                        <div class="progress-label">
+                            <span id="progressRencanaLabel">Menyiapkan...</span>
+                            <span id="progressRencanaPct">0%</span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="progressRencanaBar"></div>
+                        </div>
+                        <div class="progress-step" id="progressRencanaStep"></div>
+                    </div>
+
+                    <div class="result-card" id="resultRencana">
+                        <div class="res-icon">✅</div>
+                        <div class="res-no" id="resultNoVisit">—</div>
+                        <div class="res-text">Rencana kunjungan berhasil diajukan.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+             PAGE: REALISASI KUNJUNGAN
+        ============================================================ -->
+            <div id="pageRealisasi" style="display:none;">
+                <div class="card">
+                    <div class="card-title">
+                        📍 Pilih No. Visit
+                        <span id="visitCountBadge"
+                            style="background:var(--accent);color:#fff;font-size:10px;padding:2px 6px;border-radius:100px;">0</span>
+                    </div>
+                    <div class="visit-grid" id="visitGrid"></div>
+                    <div class="empty-state" id="visitEmpty" style="display:none;">
+                        <div class="es-icon">📋</div>
+                        <div class="es-title">Belum ada rencana kunjungan</div>
+                        <div class="es-text">Silakan ajukan rencana kunjungan terlebih dahulu.</div>
+                    </div>
+                </div>
+
+                <div class="detail-card" id="detailCard">
+                    <div class="dc-title">📄 Detail Kunjungan</div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="di-label">No. Visit</div>
+                            <div class="di-value" id="dcNoVisit">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="di-label">Status</div>
+                            <div class="di-value" id="dcStatus">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="di-label">Nama Proyek</div>
+                            <div class="di-value" id="dcNamaProyek">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="di-label">Klien</div>
+                            <div class="di-value" id="dcNamaKlien">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="di-label">Tanggal Rencana</div>
+                            <div class="di-value" id="dcTglRencana">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cameraSection" style="display:none;">
+                    <div class="card" style="padding:16px;">
+                        <div class="card-title" style="margin-bottom:12px;">📷 Foto Selfie dengan Klien</div>
+
+                        <div class="camera-wrap" id="cameraWrap">
+                            <video id="cameraVideo" autoplay playsinline muted></video>
+                            <div class="camera-overlay">
+                                <div class="camera-timestamp" id="liveTimestamp"></div>
+                                <button class="shutter-btn" onclick="capturePhoto()" title="Ambil Foto"></button>
+                            </div>
+                        </div>
+
+                        <canvas id="captureCanvas" style="display:none;"></canvas>
+
+                        <input type="file" accept="image/*" capture="environment" id="fileCameraFallback"
+                            style="display:none;" onchange="handleFallbackPhoto(event)">
+                        <div id="fallbackWrap">
+                            <button class="btn btn-primary"
+                                onclick="document.getElementById('fileCameraFallback').click()">📸 Buka Kamera</button>
+                            <p style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center;">(Gunakan
+                                tombol ini jika live camera tidak tersedia)</p>
+                        </div>
+
+                        <div class="photo-preview-wrap" id="photoPreviewWrap">
+                            <img id="photoPreview" alt="Foto Selfie">
+                            <button class="retake-btn" onclick="retakePhoto()">🔄 Ambil Ulang</button>
+                        </div>
+
+                        <button class="btn btn-success" id="btnSubmitRealisasi" onclick="submitRealisasi()"
+                            style="display:none;" disabled>
+                            📤 Submit Realisasi Kunjungan
+                        </button>
+
+                        <div class="progress-wrap" id="progressRealisasi">
+                            <div class="progress-label">
+                                <span id="progressRealisasiLabel">Memproses...</span>
+                                <span id="progressRealisasiPct">0%</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" id="progressRealisasiBar"></div>
+                            </div>
+                            <div class="progress-step" id="progressRealisasiStep"></div>
+                        </div>
+
+                        <div class="result-card" id="resultRealisasi">
+                            <div class="res-icon">🎉</div>
+                            <div class="res-no" style="font-size:16px;">Realisasi Tercatat!</div>
+                            <div class="res-text">Foto telah tersimpan di Drive dan data kunjungan telah diperbarui.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- end app-wrap -->
+    </div><!-- end appPage -->
+
+    <script>
+        // ============================================================
+        // STATE
+        // ============================================================
+        let currentUser = null;
+        let userProjects = [];
+        let userVisits = [];
+        let selectedVisit = null;
+        let capturedBase64 = null;
+        let capturedTimestamp = '';
+        let mediaStream = null;
+        let clockInterval = null;
+
+        // Calendar state
+        let currentCalDate = new Date();
+        let selectedTanggal = [];
+
+        // ============================================================
+        // GOOGLE SIGN-IN
+        // ============================================================
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: onGoogleSignIn,
+                auto_select: true
+            });
+
+            google.accounts.id.renderButton(
+                document.getElementById('g_id_signin_btn'),
+                { theme: 'filled_blue', size: 'large', width: 280, text: 'signin_with', shape: 'pill' }
+            );
+
+            google.accounts.id.prompt();
+
+            renderCalendar();
+        };
+
+        function onGoogleSignIn(res) {
+            const payload = parseJwt(res.credential);
+            const email = payload.email;
+
+            showSpinner('Memverifikasi akun...');
+            document.getElementById('loginPage').style.display = 'none';
+
+            apiCall('getUserInfo', { email: email })
+                .then(result => {
+                    hideSpinner();
+                    if (!result.success) {
+                        showToast('❌ ' + result.message, 'error', 6000);
+                        document.getElementById('loginPage').style.display = 'flex';
+                        return;
+                    }
+                    currentUser = result;
+                    document.getElementById('userAvatar').textContent = result.nama ? result.nama.charAt(0).toUpperCase() : '?';
+                    document.getElementById('userLabel').textContent = result.nama || result.email;
+                    document.getElementById('appPage').style.display = 'block';
+                    loadProjects();
+                })
+                .catch(err => {
+                    hideSpinner();
+                    showToast('❌ Gagal koneksi ke server.', 'error');
+                    document.getElementById('loginPage').style.display = 'flex';
+                });
+        }
+
+        function parseJwt(token) {
+            const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(atob(base64));
+        }
+
+        // ============================================================
+        // API HELPER — fetch to GAS doPost
+        // ============================================================
+        function apiCall(action, params) {
+            const body = Object.assign({ action: action }, params);
+            return fetch(GAS_API_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(body)
+            }).then(r => r.json());
+        }
+
+        // ============================================================
+        // TAB SWITCH
+        // ============================================================
+        function switchTab(tab) {
+            const isRencana = tab === 'rencana';
+            document.getElementById('tabRencana').classList.toggle('active', isRencana);
+            document.getElementById('tabRealisasi').classList.toggle('active', !isRencana);
+            document.getElementById('pageRencana').style.display = isRencana ? 'block' : 'none';
+            document.getElementById('pageRealisasi').style.display = isRencana ? 'none' : 'block';
+            if (!isRencana) { loadVisits(); } else { stopCamera(); }
+        }
+
+        // ============================================================
+        // LOAD PROJECTS
+        // ============================================================
+        function loadProjects() {
+            if (!currentUser) return;
+            apiCall('getUserProjects', { email: currentUser.email })
+                .then(result => {
+                    if (!result.success) { showToast('Gagal memuat proyek: ' + result.message, 'error'); return; }
+                    userProjects = result.projects;
+                    const sel = document.getElementById('selectProject');
+                    sel.innerHTML = '<option value="">— Pilih Proyek —</option>';
+                    userProjects.forEach((p, i) => {
+                        const opt = document.createElement('option');
+                        opt.value = i;
+                        opt.textContent = p.namaProyek + ' — ' + p.namaKlien;
+                        sel.appendChild(opt);
+                    });
+                })
+                .catch(() => showToast('Gagal koneksi ke server.', 'error'));
+        }
+
+        function onProjectChange() {
+            const idx = document.getElementById('selectProject').value;
+            const card = document.getElementById('projectInfoCard');
+            if (idx === '') { card.classList.remove('show'); updateSubmitBtn(); return; }
+            const p = userProjects[parseInt(idx)];
+            document.getElementById('infoNamaProyek').textContent = p.namaProyek;
+            document.getElementById('infoNamaKlien').textContent = p.namaKlien;
+            document.getElementById('infoLokasi').textContent = p.lokasi;
+            card.classList.add('show');
+            updateSubmitBtn();
+        }
+
+        function updateSubmitBtn() {
+            const projOk = document.getElementById('selectProject').value !== '';
+            const tglOk = selectedTanggal.length > 0;
+            document.getElementById('btnSubmitRencana').disabled = !(projOk && tglOk);
+        }
+
+        // ============================================================
+        // CALENDAR
+        // ============================================================
+        function renderCalendar() {
+            const year = currentCalDate.getFullYear();
+            const month = currentCalDate.getMonth();
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            document.getElementById('calTitle').textContent = monthNames[month] + ' ' + year;
+            document.getElementById('calPrevBtn').disabled = (year === today.getFullYear() && month === today.getMonth());
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const grid = document.getElementById('calGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const cellDate = new Date(year, month, d);
+                const cell = document.createElement('div');
+                cell.className = 'cal-date';
+                cell.textContent = d;
+                if (cellDate < today) {
+                    cell.classList.add('disabled');
+                } else {
+                    if (selectedTanggal.includes(dateStr)) cell.classList.add('active');
+                    cell.onclick = () => toggleDate(dateStr);
+                }
+                grid.appendChild(cell);
+            }
+        }
+
+        function calPrevMonth() { currentCalDate.setMonth(currentCalDate.getMonth() - 1); renderCalendar(); }
+        function calNextMonth() { currentCalDate.setMonth(currentCalDate.getMonth() + 1); renderCalendar(); }
+
+        function toggleDate(dateStr) {
+            const idx = selectedTanggal.indexOf(dateStr);
+            if (idx > -1) { selectedTanggal.splice(idx, 1); } else { selectedTanggal.push(dateStr); }
+            renderCalendar();
+            updateSubmitBtn();
+            const badge = document.getElementById('selectedDatesBadge');
+            if (selectedTanggal.length > 0) {
+                badge.style.display = 'block';
+                document.getElementById('selectedDatesCount').textContent = selectedTanggal.length;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ============================================================
+        // SUBMIT RENCANA
+        // ============================================================
+        function submitRencana() {
+            const idx = parseInt(document.getElementById('selectProject').value);
+            if (isNaN(idx) || selectedTanggal.length === 0) return;
+
+            const proj = userProjects[idx];
+            const payload = {
+                email: currentUser.email,
+                nama: currentUser.nama,
+                jabatan: currentUser.jabatan,
+                emailAtasan: currentUser.emailAtasan,
+                namaProyek: proj.namaProyek,
+                namaKlien: proj.namaKlien,
+                tanggalRencana: selectedTanggal
+            };
+
+            document.getElementById('btnSubmitRencana').disabled = true;
+            setProgress('progressRencana', 'progressRencanaBar', 'progressRencanaLabel', 'progressRencanaPct', 'progressRencanaStep', true, 10, 'Menyiapkan data...', '');
+
+            setTimeout(() => setProgress('progressRencana', 'progressRencanaBar', 'progressRencanaLabel', 'progressRencanaPct', 'progressRencanaStep', false, 40, 'Menyimpan ke Google Sheets...', 'Menghubungi server...'), 400);
+
+            apiCall('submitRencanaKunjungan', { payload: payload })
+                .then(result => onRencanaSubmitted(result))
+                .catch(err => {
+                    showToast('❌ Gagal koneksi ke server.', 'error');
+                    document.getElementById('btnSubmitRencana').disabled = false;
+                    setProgress('progressRencana', 'progressRencanaBar', 'progressRencanaLabel', 'progressRencanaPct', 'progressRencanaStep', true, 0, '', '');
+                });
+        }
+
+        function onRencanaSubmitted(result) {
+            if (!result.success) {
+                showToast('❌ ' + result.message, 'error');
+                document.getElementById('btnSubmitRencana').disabled = false;
+                document.getElementById('progressRencana').classList.remove('show');
+                return;
+            }
+            setProgress('progressRencana', 'progressRencanaBar', 'progressRencanaLabel', 'progressRencanaPct', 'progressRencanaStep', false, 75, 'Mengirim email ke atasan...', 'Menyiapkan notifikasi...');
+            setTimeout(() => {
+                setProgress('progressRencana', 'progressRencanaBar', 'progressRencanaLabel', 'progressRencanaPct', 'progressRencanaStep', false, 100, 'Selesai! ✅', '');
+                setTimeout(() => {
+                    document.getElementById('progressRencana').classList.remove('show');
+                    const resCard = document.getElementById('resultRencana');
+                    document.getElementById('resultNoVisit').textContent = result.visits.length + ' Kunjungan Terjadwal';
+                    const emailMsg = result.emailSent
+                        ? 'Email notifikasi telah dikirim ke atasan.'
+                        : '⚠️ Rencana tersimpan, tapi email gagal terkirim.';
+                    resCard.querySelector('.res-text').innerHTML = 'Rencana kunjungan berhasil diajukan.<br>' + emailMsg;
+                    resCard.classList.add('show');
+                    showToast('✅ Rencana berhasil diajukan untuk ' + result.visits.length + ' hari!', 'success');
+
+                    document.getElementById('selectProject').value = '';
+                    selectedTanggal = [];
+                    renderCalendar();
+                    document.getElementById('selectedDatesBadge').style.display = 'none';
+                    document.getElementById('projectInfoCard').classList.remove('show');
+                    document.getElementById('btnSubmitRencana').disabled = true;
+
+                    setTimeout(() => window.location.reload(), 5000);
+                }, 600);
+            }, 800);
+        }
+
+        // ============================================================
+        // LOAD VISITS (Realisasi tab)
+        // ============================================================
+        function loadVisits() {
+            if (!currentUser) return;
+            apiCall('getUserVisits', { email: currentUser.email })
+                .then(result => onVisitsLoaded(result))
+                .catch(() => showToast('Gagal koneksi ke server.', 'error'));
+        }
+
+        function onVisitsLoaded(result) {
+            if (!result.success) { showToast('Gagal memuat visit: ' + result.message, 'error'); return; }
+            userVisits = result.visits;
+
+            const grid = document.getElementById('visitGrid');
+            const empty = document.getElementById('visitEmpty');
+            const badge = document.getElementById('visitCountBadge');
+            badge.textContent = userVisits.length;
+            grid.innerHTML = '';
+            resetCameraSection();
+
+            if (userVisits.length === 0) { empty.style.display = 'block'; grid.style.display = 'none'; return; }
+            empty.style.display = 'none'; grid.style.display = 'grid';
+
+            userVisits.forEach((v, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'visit-chip';
+                chip.id = 'chip-' + i;
+                chip.innerHTML = '<div class="chip-no">' + v.noVisit + '</div><div class="chip-tgl">📅 ' + v.tglRencana + '</div><div class="chip-proj">' + v.namaProyek + '</div>';
+                chip.onclick = () => selectVisit(i);
+                grid.appendChild(chip);
+            });
+        }
+
+        function selectVisit(idx) {
+            document.querySelectorAll('.visit-chip').forEach(c => c.classList.remove('active'));
+            document.getElementById('chip-' + idx).classList.add('active');
+            const v = userVisits[idx];
+            document.getElementById('dcNoVisit').textContent = v.noVisit;
+            document.getElementById('dcNamaProyek').textContent = v.namaProyek;
+            document.getElementById('dcNamaKlien').textContent = v.namaKlien;
+            document.getElementById('dcTglRencana').textContent = v.tglRencana;
+            document.getElementById('dcStatus').textContent = v.status || 'Direncanakan';
+            document.getElementById('detailCard').classList.add('show');
+            selectedVisit = v;
+            document.getElementById('cameraSection').style.display = 'block';
+            resetCameraSection();
+            startCamera();
+        }
+
+        // ============================================================
+        // CAMERA
+        // ============================================================
+        function startCamera() {
+            const wrap = document.getElementById('cameraWrap');
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+                .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: false }))
+                .then(stream => {
+                    wrap.classList.add('show');
+                    document.getElementById('fallbackWrap').style.display = 'none';
+                    mediaStream = stream;
+                    document.getElementById('cameraVideo').srcObject = stream;
+                    updateLiveClock();
+                    clockInterval = setInterval(updateLiveClock, 1000);
+                })
+                .catch(() => {
+                    showToast('⚠️ Live camera tidak tersedia, gunakan tombol kamera.', 'warning');
+                    document.getElementById('fallbackWrap').style.display = 'block';
+                });
+        }
+
+        function stopCamera() {
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+        }
+
+        function updateLiveClock() {
+            const ts = document.getElementById('liveTimestamp');
+            if (ts) ts.textContent = formatTimestamp(new Date());
+        }
+
+        function formatTimestamp(d) {
+            const p = n => String(n).padStart(2, '0');
+            return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const targetW = 1280, targetH = 1920;
+            canvas.width = targetW; canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            const vw = video.videoWidth || 640, vh = video.videoHeight || 960;
+            const srcRatio = vw / vh, tgtRatio = targetW / targetH;
+            let sx, sy, sw, sh;
+            if (srcRatio > tgtRatio) { sh = vh; sw = vh * tgtRatio; sy = 0; sx = (vw - sw) / 2; }
+            else { sw = vw; sh = vw / tgtRatio; sx = 0; sy = (vh - sh) / 2; }
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, targetW, targetH);
+            addOverlays(ctx, targetW, targetH);
+            capturedBase64 = canvas.toDataURL('image/jpeg', 0.88);
+            showPreview();
+            stopCamera();
+        }
+
+        function handleFallbackPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.getElementById('captureCanvas');
+                    const targetW = 1280, targetH = 1920;
+                    canvas.width = targetW; canvas.height = targetH;
+                    const ctx = canvas.getContext('2d');
+                    const vw = img.width, vh = img.height;
+                    const srcRatio = vw / vh, tgtRatio = targetW / targetH;
+                    let sx, sy, sw, sh;
+                    if (srcRatio > tgtRatio) { sh = vh; sw = vh * tgtRatio; sy = 0; sx = (vw - sw) / 2; }
+                    else { sw = vw; sh = vw / tgtRatio; sx = 0; sy = (vh - sh) / 2; }
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+                    addOverlays(ctx, targetW, targetH);
+                    capturedBase64 = canvas.toDataURL('image/jpeg', 0.88);
+                    showPreview();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function addOverlays(ctx, targetW, targetH) {
+            const now = new Date();
+            capturedTimestamp = formatTimestamp(now);
+            ctx.save();
+            ctx.font = 'bold 28px Inter, Arial, sans-serif';
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.fillRect(targetW - 440, targetH - 60, 430, 48);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(capturedTimestamp, targetW - 430, targetH - 25);
+            ctx.restore();
+            if (selectedVisit) {
+                ctx.save();
+                ctx.font = 'bold 24px Inter, Arial, sans-serif';
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(8, targetH - 60, 320, 48);
+                ctx.fillStyle = '#93c5fd';
+                ctx.fillText(selectedVisit.noVisit, 16, targetH - 25);
+                ctx.restore();
+            }
+        }
+
+        function showPreview() {
+            document.getElementById('photoPreview').src = capturedBase64;
+            document.getElementById('cameraWrap').classList.remove('show');
+            document.getElementById('fallbackWrap').style.display = 'none';
+            document.getElementById('photoPreviewWrap').classList.add('show');
+            document.getElementById('btnSubmitRealisasi').style.display = 'flex';
+            document.getElementById('btnSubmitRealisasi').disabled = false;
+        }
+
+        function retakePhoto() {
+            capturedBase64 = null; capturedTimestamp = '';
+            document.getElementById('photoPreviewWrap').classList.remove('show');
+            document.getElementById('btnSubmitRealisasi').style.display = 'none';
+            document.getElementById('btnSubmitRealisasi').disabled = true;
+            startCamera();
+        }
+
+        function resetCameraSection() {
+            stopCamera();
+            document.getElementById('cameraWrap').classList.remove('show');
+            document.getElementById('fallbackWrap').style.display = 'none';
+            document.getElementById('photoPreviewWrap').classList.remove('show');
+            document.getElementById('btnSubmitRealisasi').style.display = 'none';
+            document.getElementById('btnSubmitRealisasi').disabled = true;
+            document.getElementById('progressRealisasi').classList.remove('show');
+            document.getElementById('resultRealisasi').classList.remove('show');
+            document.getElementById('detailCard').classList.remove('show');
+            document.getElementById('cameraSection').style.display = 'none';
+            capturedBase64 = null; capturedTimestamp = '';
+        }
+
+        // ============================================================
+        // SUBMIT REALISASI
+        // ============================================================
+        function submitRealisasi() {
+            if (!selectedVisit || !capturedBase64) return;
+            document.getElementById('btnSubmitRealisasi').disabled = true;
+
+            setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', true, 15, 'Mengompres foto...', 'Memproses gambar...');
+            setTimeout(() => setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 45, 'Mengunggah foto ke Drive...', 'Menghubungi Google Drive...'), 600);
+
+            apiCall('submitRealisasiKunjungan', {
+                payload: { noVisit: selectedVisit.noVisit, photoTimestamp: capturedTimestamp },
+                imageBase64: capturedBase64
+            })
+                .then(result => onRealisasiSubmitted(result))
+                .catch(() => {
+                    showToast('❌ Gagal koneksi ke server.', 'error');
+                    document.getElementById('btnSubmitRealisasi').disabled = false;
+                });
+        }
+
+        function onRealisasiSubmitted(result) {
+            if (!result.success) {
+                showToast('❌ ' + result.message, 'error');
+                document.getElementById('btnSubmitRealisasi').disabled = false;
+                return;
+            }
+            setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 80, 'Memperbarui data kunjungan...', 'Menulis ke Google Sheets...');
+            setTimeout(() => {
+                setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 100, 'Selesai! 🎉', '');
+                setTimeout(() => {
+                    document.getElementById('progressRealisasi').classList.remove('show');
+                    document.getElementById('resultRealisasi').classList.add('show');
+                    showToast('🎉 Realisasi berhasil tersimpan!', 'success');
+                    userVisits = userVisits.filter(v => v.noVisit !== selectedVisit.noVisit);
+                    selectedVisit = null;
+                    setTimeout(() => window.location.reload(), 5000);
+                }, 600);
+            }, 1000);
+        }
+
+        // ============================================================
+        // HELPERS
+        // ============================================================
+        function setProgress(wrapId, barId, labelId, pctId, stepId, show, pct, label, step) {
+            const wrap = document.getElementById(wrapId);
+            if (show) wrap.classList.add('show');
+            document.getElementById(barId).style.width = pct + '%';
+            document.getElementById(labelId).textContent = label;
+            document.getElementById(pctId).textContent = pct + '%';
+            document.getElementById(stepId).textContent = step;
+        }
+
+        function showToast(msg, type = 'info', duration = 4000) {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), duration);
+        }
+
+        function showSpinner(text) { document.getElementById('spinnerText').textContent = text || 'Memuat...'; document.getElementById('spinnerOverlay').classList.add('show'); }
+        function hideSpinner() { document.getElementById('spinnerOverlay').classList.remove('show'); }
+    </script>
+</body>
+
+</html>
