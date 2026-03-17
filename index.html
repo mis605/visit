@@ -1344,6 +1344,7 @@
                         currentUser = sess.user;
                         document.getElementById('userAvatar').textContent = sess.user.nama ? sess.user.nama.charAt(0).toUpperCase() : '?';
                         document.getElementById('userLabel').textContent = sess.user.nama || sess.user.email;
+                        document.getElementById('userEmailLabel').textContent = sess.user.email;
                         document.getElementById('loginPage').style.display = 'none';
                         document.getElementById('appPage').style.display = 'block';
                         loadProjects();
@@ -1356,7 +1357,27 @@
             }
 
             renderCalendar();
+
+            // Klik di luar dropdown untuk menutup
+            window.onclick = function (event) {
+                if (!event.target.matches('.user-pill') && !event.target.closest('.user-pill')) {
+                    const dropdown = document.getElementById('userDropdown');
+                    const pill = document.getElementById('userPill');
+                    if (dropdown && dropdown.classList.contains('show')) {
+                        dropdown.classList.remove('show');
+                        pill.classList.remove('active');
+                    }
+                }
+            }
         };
+
+        function toggleUserDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('userDropdown');
+            const pill = document.getElementById('userPill');
+            dropdown.classList.toggle('show');
+            pill.classList.toggle('active');
+        }
 
         function onGoogleSignIn(res) {
             currentIdToken = res.credential;
@@ -1383,6 +1404,7 @@
                     }));
                     document.getElementById('userAvatar').textContent = result.nama ? result.nama.charAt(0).toUpperCase() : '?';
                     document.getElementById('userLabel').textContent = result.nama || result.email;
+                    document.getElementById('userEmailLabel').textContent = result.email;
                     document.getElementById('appPage').style.display = 'block';
                     loadProjects();
                 })
