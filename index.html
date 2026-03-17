@@ -1357,18 +1357,6 @@
             }
 
             renderCalendar();
-
-            // Klik di luar dropdown untuk menutup
-            window.onclick = function (event) {
-                if (!event.target.matches('.user-pill') && !event.target.closest('.user-pill')) {
-                    const dropdown = document.getElementById('userDropdown');
-                    const pill = document.getElementById('userPill');
-                    if (dropdown && dropdown.classList.contains('show')) {
-                        dropdown.classList.remove('show');
-                        pill.classList.remove('active');
-                    }
-                }
-            }
         };
 
         function toggleUserDropdown(event) {
@@ -1938,6 +1926,41 @@
 
         function showSpinner(text) { document.getElementById('spinnerText').textContent = text || 'Memuat...'; document.getElementById('spinnerOverlay').classList.add('show'); }
         function hideSpinner() { document.getElementById('spinnerOverlay').classList.remove('show'); }
+
+        // --- Dropdown User & Logout ---
+        function toggleUserDropdown(e) {
+            if (e) e.stopPropagation();
+            const pill = document.getElementById('userPill');
+            const menu = document.getElementById('userDropdown');
+            const isShowing = menu.classList.contains('show');
+
+            if (!isShowing) {
+                menu.classList.add('show');
+                pill.classList.add('active');
+            } else {
+                menu.classList.remove('show');
+                pill.classList.remove('active');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('visitSession');
+            currentIdToken = null;
+            currentUser = null;
+            window.location.reload();
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(event) {
+            if (!event.target.closest('.user-pill')) {
+                const menu = document.getElementById('userDropdown');
+                const pill = document.getElementById('userPill');
+                if (menu && menu.classList.contains('show')) {
+                    menu.classList.remove('show');
+                    pill.classList.remove('active');
+                }
+            }
+        });
     </script>
 </body>
 
