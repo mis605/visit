@@ -13,7 +13,7 @@
          CONFIGURATION — Ganti kedua nilai ini
     ============================================================ -->
     <script>
-        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyFu0jaHHT9-mDkPQa9OGYEYCVXt7lXHlmDK-cDkk-tQJn8oaqSx-wUuii255Fq-oB9/exec'; // https://script.google.com/macros/s/XXX/exec
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx-bvyhvG5t-P_HjP2bHbOoSpeh_lfvE4EFX29jBb-vjCv5KqelajAkqxI4q2zEjsJ3/exec';
         const GOOGLE_CLIENT_ID = '556004279063-apavopu04dm6bdgoim9a1rhg660p9m9r.apps.googleusercontent.com'; // dari Google Cloud Console
     </script>
 
@@ -160,48 +160,117 @@
         .user-pill {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             background: var(--bg-card2);
             border: 1px solid var(--border);
             border-radius: 100px;
-            padding: 4px 12px 4px 4px;
+            padding: 4px 14px 4px 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .user-pill:hover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .user-avatar {
-            width: 38px;
-            height: 38px;
+            width: 32px;
+            height: 32px;
             background: linear-gradient(135deg, var(--accent), #60a5fa);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 16px;
-            box-shadow: 0 0 15px var(--accent-glow);
+            font-size: 14px;
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
-        .user-info-text {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-2);
+            max-width: 100px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .logout-btn {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            padding: 4px 10px;
-            border-radius: 6px;
+        .user-chevron {
             font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: var(--transition);
+            color: var(--text-3);
+            transition: transform 0.3s ease;
         }
 
-        .logout-btn:hover {
-            background: var(--error);
-            color: #fff;
+        .user-pill.active .user-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* DROPDOWN MENU */
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 180px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 200;
+            animation: slideDown 0.3s ease;
+        }
+
+        .user-dropdown.show {
+            display: flex;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-2);
+            transition: var(--transition);
+            text-align: left;
+            width: 100%;
+            background: transparent;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-1);
+        }
+
+        .dropdown-item.logout {
+            color: var(--error);
+        }
+
+        .dropdown-item.logout:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .di-icon {
+            font-size: 14px;
         }
 
         .user-label {
@@ -1016,11 +1085,25 @@
     <div id="appPage">
         <header class="app-header">
             <div class="header-brand">🏢 Visit Management</div>
-            <div class="user-pill">
+            <div class="user-pill" onclick="toggleUserDropdown(event)" id="userPill">
                 <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-info-text">
-                    <div class="user-name" id="userLabel">—</div>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
+                <div class="user-name" id="userLabel">—</div>
+                <div class="user-chevron">▼</div>
+
+                <div class="user-dropdown" id="userDropdown">
+                    <div class="dropdown-item"
+                        style="cursor:default; border-bottom: 1px solid var(--border); margin-bottom: 4px; border-radius: 0; padding-bottom: 12px;">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div style="font-size:10px; color:var(--text-3); text-transform:uppercase;">Signed in as
+                            </div>
+                            <div id="userEmailLabel"
+                                style="font-size:11px; color:var(--text-1); overflow:hidden; text-overflow:ellipsis;">
+                                ...</div>
+                        </div>
+                    </div>
+                    <button class="dropdown-item logout" onclick="logout()">
+                        <span class="di-icon">🚪</span> Logout
+                    </button>
                 </div>
             </div>
         </header>
@@ -1177,8 +1260,10 @@
 
                         <!-- FILE UPLOAD (OPTIONAL) -->
                         <div class="file-upload-wrap">
-                            <div class="file-upload-title">🖇️ File Tambahan (Opsional) <small style="font-weight:400;opacity:0.6;">(Max 3 file, 5MB/file)</small></div>
-                            <input type="file" id="additionalFilesInput" multiple style="display:none;" onchange="handleAdditionalFiles(event)">
+                            <div class="file-upload-title">🖇️ File Tambahan (Opsional) <small
+                                    style="font-weight:400;opacity:0.6;">(Max 3 file, 5MB/file)</small></div>
+                            <input type="file" id="additionalFilesInput" multiple style="display:none;"
+                                onchange="handleAdditionalFiles(event)">
                             <label for="additionalFilesInput" class="file-upload-btn-label">
                                 ➕ Pilih File
                             </label>
@@ -1725,7 +1810,7 @@
                 }
 
                 const reader = new FileReader();
-                reader.onload = function(evt) {
+                reader.onload = function (evt) {
                     additionalFiles.push({
                         name: file.name,
                         type: file.type,
@@ -1774,10 +1859,10 @@
             setTimeout(() => setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 45, 'Mengunggah data & file...', 'Menghubungi Google Drive...'), 600);
 
             apiCall('submitRealisasiKunjungan', {
-                payload: { 
-                    noVisit: selectedVisit.noVisit, 
+                payload: {
+                    noVisit: selectedVisit.noVisit,
                     photoTimestamp: capturedTimestamp,
-                    additionalFiles: additionalFiles 
+                    additionalFiles: additionalFiles
                 },
                 imageBase64: capturedBase64
             })
