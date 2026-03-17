@@ -436,6 +436,87 @@
             color: var(--text-2);
         }
 
+        /* FILE UPLOAD */
+        .file-upload-wrap {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-card2);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .file-upload-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-2);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-list {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-1);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .file-remove {
+            color: var(--error);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+
+        .file-remove:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .file-upload-btn-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .file-upload-btn-label:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
         /* ==============================
            CALENDAR
         ============================== */
@@ -1067,6 +1148,16 @@
                             <button class="retake-btn" onclick="retakePhoto()">🔄 Ambil Ulang</button>
                         </div>
 
+                        <!-- FILE UPLOAD (OPTIONAL) -->
+                        <div class="file-upload-wrap">
+                            <div class="file-upload-title">🖇️ File Tambahan (Opsional) <small style="font-weight:400;opacity:0.6;">(Max 3 file, 5MB/file)</small></div>
+                            <input type="file" id="additionalFilesInput" multiple style="display:none;" onchange="handleAdditionalFiles(event)">
+                            <label for="additionalFilesInput" class="file-upload-btn-label">
+                                ➕ Pilih File
+                            </label>
+                            <div class="file-list" id="additionalFilesList"></div>
+                        </div>
+
                         <button class="btn btn-success" id="btnSubmitRealisasi" onclick="submitRealisasi()"
                             style="display:none;" disabled>
                             📤 Submit Realisasi Kunjungan
@@ -1106,8 +1197,9 @@
         let capturedBase64 = null;
         let capturedTimestamp = '';
         let mediaStream = null;
-        let clockInterval = null;
-        let currentIdToken = null;  // Google ID Token (JWT) untuk verifikasi server-side
+        let clockInterval   = null;
+        let currentIdToken  = null;  // Google ID Token (JWT) untuk verifikasi server-side
+        let additionalFiles = [];   // Simpan array { name, type, base64 }
 
         // Calendar state
         let currentCalDate = new Date();
@@ -1567,6 +1659,67 @@
             // Catatan: detailCard dan cameraSection TIDAK direset di sini
             // agar tidak menghapus konten yang baru saja diisi di selectVisit()
             capturedBase64 = null; capturedTimestamp = '';
+            additionalFiles = [];
+            renderAdditionalFiles();
+        }
+
+        // ============================================================
+        // ADDITIONAL FILES HANDLING
+        // ============================================================
+        function handleAdditionalFiles(e) {
+            const files = Array.from(e.target.files);
+            const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+            if (additionalFiles.length + files.length > 3) {
+                showToast('❌ Maksimal 3 file tambahan.', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            let processed = 0;
+            files.forEach(file => {
+                if (file.size > MAX_SIZE) {
+                    showToast('❌ File "' + file.name + '" melebihi 5MB.', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    additionalFiles.push({
+                        name: file.name,
+                        type: file.type,
+                        base64: evt.target.result
+                    });
+                    processed++;
+                    if (processed === files.length) {
+                        renderAdditionalFiles();
+                        e.target.value = '';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderAdditionalFiles() {
+            const list = document.getElementById('additionalFilesList');
+            list.innerHTML = '';
+            additionalFiles.forEach((file, idx) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-info">
+                        <span>📄</span>
+                        <span title="${file.name}">${file.name}</span>
+                    </div>
+                    <div class="file-remove" onclick="removeAdditionalFile(${idx})">✕</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function removeAdditionalFile(idx) {
+            additionalFiles.splice(idx, 1);
+            renderAdditionalFiles();
         }
 
         // ============================================================
@@ -1577,10 +1730,14 @@
             document.getElementById('btnSubmitRealisasi').disabled = true;
 
             setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', true, 15, 'Mengompres foto...', 'Memproses gambar...');
-            setTimeout(() => setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 45, 'Mengunggah foto ke Drive...', 'Menghubungi Google Drive...'), 600);
+            setTimeout(() => setProgress('progressRealisasi', 'progressRealisasiBar', 'progressRealisasiLabel', 'progressRealisasiPct', 'progressRealisasiStep', false, 45, 'Mengunggah data & file...', 'Menghubungi Google Drive...'), 600);
 
             apiCall('submitRealisasiKunjungan', {
-                payload: { noVisit: selectedVisit.noVisit, photoTimestamp: capturedTimestamp },
+                payload: { 
+                    noVisit: selectedVisit.noVisit, 
+                    photoTimestamp: capturedTimestamp,
+                    additionalFiles: additionalFiles 
+                },
                 imageBase64: capturedBase64
             })
                 .then(result => onRealisasiSubmitted(result))
